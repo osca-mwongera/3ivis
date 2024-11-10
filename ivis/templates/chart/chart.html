@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-12">
+        <h2>{{ object.username }}</h2>
+        {% if object.name %}<p>{{ object.name }}</p>{% endif %}
+      </div>
+    </div>
+    <h1>Car sales in Germany between January and September 2024</h1>
+  </div>
+{% endblock content %}
+{% block inline_javascript %}
+  <svg width="500" height="500">
+  </svg>
+  <style>
+    .bar {
+      fill: steelblue;
+    }
+
+    .bar:hover {
+      fill: orange;
+    }
+
+    .axis-label {
+      font-size: 14px;
+    }
+
+    .x-axis path,
+    .y-axis path {
+      shape-rendering: crispEdges;
+    }
+  </style>
+  <script>
+    // Get data from API
+    fetch('/api/data')
+      .then(response => response.json())
+      .then(chartData => {
+        renderChart(chartData);
+      })
+      .catch(error => console.error("There was an error fetching data:", error));
+
+    // Set up the SVG canvas dimensions
+    const width = 600;
+    const height = 400;
+    const margin = {
+      top: 20,
+      right: 20,
+      bottom: 40,
+      left: 40
+    };
+
+    const svg = d3.select("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    // Function to render the bar chart with fetched data
+    function renderChart(data) {
+      // Define scales based on the data
+      const xScale = d3.scaleBand()
+        .domain(data.map(d => d.model)) // Car models for x-axis
+        .range([margin.left, width - margin.right])
+        .padding(0.1);
+
+      const yScale = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.value)]) // Max value for y-axis
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+      // Create bars
+      svg.selectAll(".bar")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => xScale(d.model)) // Set x position based on car model
+        .attr("y", d => yScale(d.value)) // Set y position based on value
+        .attr("width", xScale.bandwidth()) // Bar width
+        .attr("height", d => height - margin.bottom - yScale(d.value)); // Bar height
+
+      // Add x-axis
+      svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .attr("class", "x-axis")
+        .call(d3.axisBottom(xScale))
+        .selectAll(".tick text").attr("transform", "rotate(90)") // Rotate labels by 90 degrees
+        .attr("class", "axis-label");
+
+      // Add y-axis
+      svg.append("g")
+        .attr("transform", `translate(${margin.left},0)`)
+        .attr("class", "y-axis")
+        .call(d3.axisLeft(yScale))
+        .selectAll(".tick text")
+        .attr("class", "axis-label");
+    }
+  </script>
+{% endblock inline_javascript %}
